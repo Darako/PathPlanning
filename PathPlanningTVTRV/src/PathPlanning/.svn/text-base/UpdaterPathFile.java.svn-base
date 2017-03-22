@@ -1,0 +1,91 @@
+
+package PathPlanning;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.StringTokenizer;
+
+
+/**
+ * Alows to read and update a path file.
+ * @author Pablo Muñoz
+ */
+public class UpdaterPathFile extends SearchMethod {
+
+    public UpdaterPathFile(String path)
+    {
+        super("null",new Map(500,500,1,1,true,true), new Node(0,0,0), new Node(0,0,0), (short)0, false, false, false);
+        // Read path file
+        String abspath = new File("").getAbsolutePath();
+        
+        try{
+            FileReader fr = new FileReader(abspath + File.separator + path);
+            BufferedReader pfile = new BufferedReader(fr);
+            StringTokenizer st;
+            // Read path data
+            String preline = "";
+            String line = pfile.readLine();
+            while(line.charAt(0) == '#')
+            {
+                st = new StringTokenizer(line);
+                st.nextToken();
+                if(line.contains("v-expans"))
+                    expnodes = Integer.parseInt(st.nextToken());
+                else
+                if(line.contains("cpu-time"))
+                    add_cpu_time(Double.parseDouble(st.nextToken()));
+                else
+                if(line.contains("Any-angle"))
+                    change_mode(true);
+                else
+                if(line.contains("withc"))
+                    withc = true;
+                else
+                if(line.contains("withz"))
+                    //withz = true;
+                    System.out.println("Add #withz to path file.");
+                preline = line;
+                line = pfile.readLine();
+            }
+            // Previous read line is algorithm name
+            change_name(preline.substring(1));
+            
+            // Read path
+            ArrayList<Node> newpath = new ArrayList();
+            Node node;
+            while(line != null)
+            {
+                st = new StringTokenizer(line);
+                node = new Node(Integer.parseInt(st.nextToken()), Integer.parseInt(st.nextToken()), Float.parseFloat(st.nextToken()));
+                newpath.add(0, node);
+                line = pfile.readLine();
+            }
+            // Update start and goal nodes and path
+            set_start(newpath.get(newpath.size()-1));
+            set_goal(newpath.get(0));
+            set_new_path(newpath);
+            
+            pfile.close();
+        }catch(FileNotFoundException nf){
+            System.out.println("No input file found: " + nf.toString());
+        }catch(IOException ioe){
+            System.out.println("Input/output error: " + ioe.toString());
+        }
+        
+        // Write new path file
+        FileManager.WritePathFile(path, get_path(), path_info());
+    }
+    
+    @Override
+    public boolean search()
+    {
+        return true;
+    }
+    
+    @Override
+    protected void clear_internal_data()
+    {
+    }
+    
+}
+

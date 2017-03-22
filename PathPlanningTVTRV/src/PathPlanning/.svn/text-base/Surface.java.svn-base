@@ -1,0 +1,282 @@
+
+package PathPlanning;
+
+/**
+ * Class to interpolate quadratic terrains.
+ * @author Pablo Muñoz & Bonifacio Castaño
+ */
+public class Surface {
+
+    // x^2,y^2,xy,x,y,n
+    private double[] c;
+    // Extended matrix
+    private double[][] m;
+    // Number of X points
+    private int N;
+    // Number of Y points
+    private int M;
+    // Has solution
+    private boolean solved;
+    
+    /**
+     * Create and try to solve a quadratic function to interpolate a terrain.
+     * @param z knows altitude points proportionally spaced. Minimum 3x3 array z[x][y]. 
+     * The interpolation function is: z=f(x,y)=ax^2+by^2+cxy+dx+ey+f with x in [1,N], y in [1,M].
+     */
+    public Surface(float[][] z)
+    {
+        c = new double[6];
+        solved = false;
+        N = z.length;
+        M = z[0].length;
+        if(GenerateExtendedMatrix(z))
+            solved = LinealSolve();
+    }
+   
+    /**
+     * Create a surface function with the given coefs.
+     */
+    public Surface(float A, float B, float C, float D, float E, float F)
+    {
+        c = new double[6];
+        solved = true;
+        M = 1; N = 1;
+        c[0] = A; c[1] = B; c[2] = C;
+        c[3] = D; c[4] = E; c[5] = F;
+    }
+    
+    public double get_coef(int coefindex)
+    {
+        if(coefindex < 0 || coefindex > c.length)
+            return 0;
+        else
+            return c[coefindex];
+    }
+    
+    private double eval_int(double x, double m, double n, double a)
+    {
+        double mn = m*n;
+        double m2 = m*m;
+        double n2 = n*n;
+        double mx = 4*m2*x;
+        double sm = Math.sqrt(m2);
+        double s4 = Math.sqrt(4);
+        double sb = Math.sqrt(1+a*a+Math.pow(2*m*x+n,2));
+        double c1 = (2*m*x+n)/2 * sb;
+        double c2 = (1+a*a)/2 * Math.log(Math.abs(2*m*x+n+sb));
+        return c1+c2;
+//        double sb = Math.sqrt(1+mx*x+4*mn*x+n2+a*a);
+//        double s1 = ((2*mx + 4*mn) * sb) / (m2*16);
+//        double ln = Math.log((((2*mn+mx)*s4) / (4*sm)) + sb);
+//        return s1 + s4*(ln + ln*a*a) / (8*sm);
+    }
+    
+    /**
+     * Compute the length between two points on the surface.
+     * @param x1 x coord between 1 and N (number of x points employed) for initial point.
+     * @param y1 y coord between 1 and N (number of x points employed) for initial point.
+     * @param x2 x coord between 1 and N (number of x points employed) for goal point.
+     * @param y2 y coord between 1 and N (number of x points employed) for goal point.
+     * @return the length between the two points at surface level, NaN if there is no function for the surface.
+     */
+    public double get_l(double x1, double y1, double x2, double y2)
+    {
+        if(!solved)
+            return Double.NaN;
+        double dx = x2-x1;
+        double dy = y2-y1;
+        double a = dy/dx;
+        double b = y1 - ((x1*dy)/dx);
+        double m = c[0] + c[1]*a*a + c[2]*a;
+        double n = c[2]*b + 2*c[1]*a*b + c[4]*a + c[3];
+        return Math.abs((eval_int(x2, m, n, a) - eval_int(x1, m, n, a)) / (2*m));
+    }
+    
+    /**
+     * Get the altitude for any (x,y) point using the resultant interpolation function.
+     * @param x x coord between 1 and N (number of x points employed) for real adjust.
+     * @param y y coord between 1 and M (number of y points employed) for real adjust.
+     * @return the interpolated altitude for the point or NaN if there is no interpolation.
+     */
+    public double get_z(double x, double y)
+    {
+        if(solved)
+            return c[0]*x*x + c[1]*y*y + c[2]*x*y + c[3]*x + c[4]*y + c[5];
+        else
+            return Double.NaN;
+    }
+    
+    /**
+     * Compute the normal vector to the surface in the given point.
+     * @param x x point.
+     * @param y y point.
+     * @return the normal vector or NaN if there is no surface function.
+     */
+    public double[] get_normal_vector(double x, double y)
+    {
+        if(!solved)
+            return new double[]{Double.NaN, Double.NaN, 1};
+        double vn[] = new double[3];
+        vn[0] = 2*c[0]*x + c[2]*y + c[3];
+        vn[1] = 2*c[1]*y + c[2]*x + c[4];
+        vn[2] = 1;
+        return vn;
+    }
+    
+    /**
+     * Compute the angle between the normal vector and the surface in the given point.
+     * @param x x point.
+     * @param y y point.
+     * @return the angle in degrees or NaN if there is no valid surface function.
+     */
+    public double get_theta_x(double x, double y)
+    {
+        if(solved)
+            return Math.atan(2*c[0]*x + c[2]*y + c[3]) * Geometry.CONV;
+        else
+            return Double.NaN;
+    }
+    
+    /**
+     * Compute the angle between the normal vector and the surface in the given point.
+     * @param x x point.
+     * @param y y point.
+     * @return the angle in degrees or NaN if there is no valid surface function.
+     */
+    public double get_theta_y(double x, double y)
+    {
+        if(solved)
+            return Math.atan(2*c[1]*y + c[2]*x + c[4]) * Geometry.CONV;
+        else
+            return Double.NaN;
+    }
+    
+    /**
+     * Generate the extended matrix for the equation system.
+     * @param z altitude points.
+     * @return false for ArrayIndexOutOfBoundsException, true otherwise.
+     */
+    private boolean GenerateExtendedMatrix(float[][] z)
+    {
+        try{
+        // x,y,z,x2,y2,xy,x3,y3,x2y,xy2,x4,y4,x3y,x2y2,xy3,x2z,y2z,xyz,xz,yz
+        double[] p = new double[20];
+        double[] t = new double[20];
+        for(int i=1; i <= N; i++)
+            for(int j=1; j <= M; j++)
+            {
+                t[ 0] = i;
+                t[ 1] = j;
+                t[ 2] = z[i-1][j-1];
+                t[ 3] = t[0]*t[0];
+                t[ 4] = t[1]*t[1];
+                t[ 5] = t[0]*t[1];
+                t[ 6] = t[0]*t[3];
+                t[ 7] = t[1]*t[4];
+                t[ 8] = t[1]*t[3];
+                t[ 9] = t[0]*t[4];
+                t[10] = t[3]*t[3];
+                t[11] = t[4]*t[4];
+                t[12] = t[6]*t[1];
+                t[13] = t[3]*t[4];
+                t[14] = t[0]*t[7];
+                t[15] = t[2]*t[3];
+                t[16] = t[2]*t[4];
+                t[17] = t[2]*t[5];
+                t[18] = t[0]*t[2];
+                t[19] = t[1]*t[2];
+                for(int k=0; k < 20; k++)
+                    p[k] += t[k];
+            }
+        m = new double[][]{ {p[10],p[13],p[12],p[6],p[8],p[3],p[15]},
+                           {p[13],p[11],p[14],p[9],p[7],p[4],p[16]},
+                           {p[12],p[14],p[13],p[8],p[9],p[5],p[17]},
+                           {p[ 6],p[ 9],p[ 8],p[3],p[5],p[0],p[18]},
+                           {p[ 8],p[ 7],p[ 9],p[5],p[4],p[1],p[19]},
+                           {p[ 3],p[ 4],p[ 5],p[0],p[1],N*M ,p[2]} };
+        }catch(ArrayIndexOutOfBoundsException e){return false;}
+        return true;
+    }
+    
+    /**
+     * Use the Gauss-Jordan algorithm to solve the linear equation system.
+     * @return True if there is solution for the equation system. False otherwise.
+     */
+    private boolean LinealSolve()
+    {
+        int i,j,k;
+        double temp;
+        int n = 6;
+	for(i = 0; i < n; i++)
+        {
+            int p = i;
+            while(p < n && m[p][i]==0)
+                p++;
+            if(p == n)
+                return false;
+            if( p != i)
+            for(j = 0; j <= n; j++)
+            {
+                temp = m[i][j];
+                m[i][j] = m[p][j];
+                m[p][j] = temp;
+            }
+            for(j = i+1; j < n; j++)
+            {
+                temp = m[j][i]/m[i][i];
+                for(k = 0; k <= n; k++)
+                    m[j][k] = m[j][k] - temp*m[i][k];
+            }
+        }
+        if(m[n-1][n-1]==0)
+            return false;
+        c[n-1] = m[n-1][n]/m[n-1][n-1];
+        for(i = n-2; i >= 0; i--)
+        {
+            double s=m[i][n];
+            for(j = i+1; j < n ; j++)
+                s = s - m[i][j]*c[j];
+            c[i] = s/m[i][i];
+        }
+        return true;
+    }
+
+    /**
+     * @return A string with the Scilab function to show the interpolation function.
+     */
+    @Override
+    public String toString()
+    {
+        java.text.DecimalFormat df = new java.text.DecimalFormat("0.000");
+        df.setDecimalFormatSymbols(java.text.DecimalFormatSymbols.getInstance(java.util.Locale.US));
+        return ("xr=0:0.2:"+N
+                + "\nyr=0:0.2:"+M
+                + "\ndeff('z=f(x,y)','z="+df.format(c[0])+"*x^2"
+                + (c[1]>0?"+":"")+df.format(c[1])+"*y^2"
+                + (c[2]>0?"+":"")+df.format(c[2])+"*x*y"
+                + (c[3]>0?"+":"")+df.format(c[3])+"*x"
+                + (c[4]>0?"+":"")+df.format(c[4])+"*y"
+                + (c[5]>0?"+":"")+df.format(c[5])+"')"
+                +"\nfplot3d(xr,yr,f)");
+    }
+    
+    /**
+     * Shows and string in Matlab format with the provided altitude points.
+     * @param z altitude points.
+     */
+    public static void printMatrixPoints(float[][] z)
+    {
+        System.out.print("M = [");
+        for(int j=0; j<z[0].length; j++)
+        {
+            for(int i=0; i<z.length; i++)
+                System.out.print(z[i][j]+" ");
+            System.out.println(" ; ");
+        }
+        System.out.println("]");
+        System.out.println("xl=1:1:"+z.length);
+        System.out.println("yl=1:1:"+z[0].length);
+        System.out.println("plot3d(xl,yl,M')");
+    }
+    
+}

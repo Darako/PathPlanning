@@ -1,0 +1,344 @@
+
+package PathPlanning;
+
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Random;
+import java.util.StringTokenizer;
+
+/**
+ * Auxiliary class to testing implementations.
+ * @author Pablo Muñoz
+ */
+public abstract class AuxTests {
+    
+    /** 
+     * Comparation between Bresenham line of sight and Bonifacio&Pablo algorithm.
+     * @param N number of line of sight cheks.
+     * @param zfile DEM file used for test.
+     * @param cfile costs file used for test.
+     * @param printpartial true to print partial information.
+     * @return Average computing time for Bresenham algorithm (array [0]) and our algorithm (array [1]).
+     */
+    public static double[] LineOfSightTest(int N, String zfile, String cfile, boolean printpartial)
+    {
+        Map mapa = new Map(zfile, cfile, true);
+        boolean los1, losb;
+        Node n1, n2;
+        int fails = 0;
+	long c1, cb;
+        long max1 = 0, maxb = 0;
+	double avg[] = new double[2];
+        avg[0] = 0; avg[1] = 0;
+        java.util.Random rand = new java.util.Random();
+        for(int i = 0; i < N; i++)
+        {
+            n1 = new Node(rand.nextInt(1000),rand.nextInt(1000),0);
+	    while(mapa.get_succesors_without_obstacles(n1).size() < 1)
+		n1 = new Node(rand.nextInt(1000),rand.nextInt(1000),0);
+            n2 = new Node(rand.nextInt(1000),rand.nextInt(1000),0);
+	    while(n2.equals(n1) || mapa.get_succesors_without_obstacles(n2).size() < 1)
+		n2 = new Node(rand.nextInt(1000),rand.nextInt(1000),0);
+	    c1 = System.nanoTime();
+            los1 = Geometry.LineOfSight(mapa, n1, n2);
+	    c1 = System.nanoTime() - c1;
+	    cb = System.nanoTime();
+	    losb = Geometry.LineOfSightB(mapa, n1, n2);
+	    cb = System.nanoTime() - cb;
+	    avg[0] += cb;
+	    avg[1] += c1;
+	    maxb = Math.max(maxb, cb);
+            max1 = Math.max(max1, c1);
+            if(los1 != losb && printpartial)
+            {
+                System.out.println("FAIL CHECK: "+n1.getXYZ()+" -> "+n2.getXYZ());
+                System.out.println("   "+los1+" <> "+losb);
+                fails++;
+            }
+        }
+	avg[0] /= N;
+	avg[1] /= N;
+        if(printpartial)
+        {
+            java.text.DecimalFormat df = new java.text.DecimalFormat("000000.000");
+            System.out.println("TOTAL FAILS: "+fails+" over "+N+" tries");
+            System.out.println("Line of Sight AVG(nsec)   MAX(nsec)");
+            System.out.println("Bresenham --- "+df.format(avg[0])+"  "+df.format(maxb));
+            System.out.println("B&P --------- "+df.format(avg[1])+"  "+df.format(max1));
+        }
+        return avg;
+    }
+
+    
+    public static boolean PruebasRooms(int N1, int N2, boolean generate)
+    {
+        int cs = 30;
+        if(N2 <= N1) return false;
+        String outfile;
+        // Generate
+        if(generate)
+            for(int d = 5; d < 16; d=d+5)
+            {
+                System.out.println("Generating indoor maps with "+d+" cells...");
+                outfile = "costs"+File.separator+"r"+d+"x"+d;
+                FileManager.GenerateZfile(outfile, d*cs+1, d*cs+1, 0);
+                for(int n = N1; n <= N2; n++)
+                {
+                    outfile = "costs"+File.separator+"r"+d+"x"+d+"-"+n;
+                    FileManager.GenerateRfile(outfile, d, d, cs);
+                }
+            }
+        // Solve
+        String room;
+        String surf;
+        boolean solved;
+        int count;
+        float medt, medv, medf;
+        Map map = new Map(5,5,1,1,true,true);
+        Thetastar theta = new Thetastar(map, new Node(1,1,1), new Node(1,1,1), (short)1, false, false);
+        for(int d = 5; d < 16; d=d+5)
+        {
+            medt = 0; medv = 0; medf = 0;
+            surf = "costs"+File.separator+"r"+d+"x"+d;
+            for(int n = N1; n <= N2; n++)
+            {
+                System.out.println(n+" / "+N2);
+                room = "costs"+File.separator+"r"+d+"x"+d+"-"+n;
+                map = new Map(surf, room, true);
+                solved = false;
+                count = 0;
+                while(!solved && count < 20)
+                {
+                    theta = new Thetastar(map, map.get_node(1, 1), map.get_node(d*cs-2, d*cs-2),Heuristics.H_EUCLIDEAN , false, false);
+                    solved = theta.search();
+                    count++;
+                }
+                medt += theta.get_cpu_time();
+                outfile = "paths"+File.separator+"p-t-"+d+"x"+d+"-"+n;
+                if(count >= 20)
+                    System.out.println("THETA* ERROR "+outfile);
+                else
+                    FileManager.WritePathFile(outfile, theta.get_path(), theta.path_info());
+           //     System.out.println(d+" cells, ALG -t ");
+           //     System.out.println(theta.path_info());
+                
+//                map.restart_map();
+//                solved = false;
+//                count = 0;
+//                while(!solved && count < 20)
+//                {
+//                    theta = new Thetastar(map, map.get_node(1, 1), map.get_node(d*cs-2, d*cs-2), Heuristics.H_ALPHA, false, false);
+//                    theta.change_name("Basic Theta* H-alpha");
+//                    solved = theta.search();
+//                    count++;
+//                }
+//                medv += theta.get_cpu_time();
+//                outfile = "paths"+File.separator+"p-v-"+d+"x"+d+"-"+n;
+//                if(count >= 20)
+//                    System.out.println("ALPHA-THETA* ERROR "+outfile);
+//                else
+//                    FileManager.WritePathFile(outfile, theta.get_path(), theta.path_info());
+//                System.out.println(d+" cells, CPU time -v "+theta.get_cpu_time()+" msec");
+                
+                map.restart_map();
+                solved = false;
+                count = 0;
+                while(!solved && count < 20)
+                {
+                    theta = new Thetastar(map, map.get_node(1, 1), map.get_node(d*cs-2, d*cs-2), Heuristics.H_ALPHA2, false, false);
+                    theta.change_name("H-Theta*");
+                    solved = theta.search();
+                    count++;
+                }
+                medf += theta.get_cpu_time();
+                outfile = "paths"+File.separator+"p-f-"+d+"x"+d+"-"+n;
+                if(count >= 20)
+                    System.out.println("H-THETA* ERROR "+outfile);
+                else
+                    FileManager.WritePathFile(outfile, theta.get_path(), theta.path_info());
+              //  System.out.println(d+" cells, ALG -f ");
+              //  System.out.println(theta.path_info());
+              //  System.out.println(" Ahorrados -f: "+theta.ahorrados);
+            }
+            medt /= (N2-N1)+1;
+            medv /= (N2-N1)+1;
+            medf /= (N2-N1)+1;
+            System.out.println("Average for "+(N2-N1+1)+" maps");
+            System.out.println(d+" cells, CPU time -t "+medt+" msec");
+            System.out.println(d+" cells, CPU time -v "+medv+" msec");
+            System.out.println(d+" cells, CPU time -f "+medf+" msec");
+        }
+        
+        return true;
+    }
+  
+    /**
+     * Function to test the quadratic surface interpolation.
+     * @param N number of X points
+     * @param M number of Y points
+     * @param c1 first factor: x^2
+     * @param c2 second factor: y^2
+     * @param c3 third factor: x*y
+     * @param c4 fourth factor: x
+     * @param c5 fifth factor: y
+     * @param c6 last factor: independent term
+     * @param x x coord to get interpolated z
+     * @param y y coord to get interpolated z
+     * @note Example: AuxTests.surfaceTest(5,5, -4, 8, 5, 2, 1, 5, 1, 2, -2, 3);
+     */
+    public static void surfaceTest(int N, int M, float c1, float c2, float c3, float c4, float c5, float c6, float x1, float y1, float x2, float y2)
+    {
+        java.text.DecimalFormat df = new java.text.DecimalFormat("0.000");
+        float[][] z = new float[N][M]; // f(x,y)=z[x][y]
+        for(int i=0; i<N; i++)
+            for(int j=0; j<M; j++)
+                z[i][j] = (c1*(i+1)*(i+1) + c2*(j+1)*(j+1) + c3*(i+1)*(j+1) + c4*(i+1)+ c5*(j+1) + c6) ;//+ (float)(Math.random()-Math.random());
+        Surface s = new Surface(z);
+        System.out.println("z=f(x,y) = "+df.format(c1)+"*x^2 + "+df.format(c2)+"*y^2 + "+df.format(c3)+"*x*y + "+
+                df.format(c4)+"*x + "+df.format(c5)+"*y + "+df.format(c6));
+        System.out.println("f("+x1+","+y1+") = "+s.get_z(x1, y1));
+        System.out.println("f("+x2+","+y2+") = "+s.get_z(x2, y2));
+        System.out.println("Distance between ("+x1+","+y1+"),("+x2+","+y2+"): "+s.get_l(x1, y1, x2, y2));
+        System.out.println(s.toString());      
+        Surface.printMatrixPoints(z);
+    }
+    
+    /**
+     * Take a submap from a file.
+     * @param filein read file.
+     * @param fileout output file.
+     * @param col0 column to start read.
+     * @param row0 row to start read.
+     * @param col1 output columns.
+     * @param row1 output rows.
+     * @param step number of cells to ignore (less than 2 take all cells).
+     * @return matrix of col1xrow1 with the altitude values readed.
+     * @note example: AuxTests.dtm_reduce("C:/gale.grd", "C:/dem",600,200,100,100,1);
+     */
+    public static float[][] dtm_reduce(String filein, String fileout, int col0, int row0, int col1, int row1, int step)
+    {
+        float val;
+        float[][] z = new float[col1][row1];
+        try{
+            String abspath = new File("").getAbsolutePath();
+            FileReader fr = new FileReader(filein);
+            BufferedReader dtm = new BufferedReader(fr);
+            FileWriter fw = new FileWriter(fileout);
+            PrintWriter zfile = new PrintWriter(fw);
+            StringTokenizer st;
+            // Read file
+            for(int i = 1; i < row0; i++)
+                dtm.readLine();
+            for(int j = 0; j < row1; j++)
+            {
+                st = new StringTokenizer(dtm.readLine());
+                for(int i = 1; i < col0; i++)
+                    if(st.hasMoreTokens())
+                    st.nextToken();
+                for(int i = 0; i < col1; i++)
+                {
+                    if(st.hasMoreTokens())
+                    {
+                    val = Float.valueOf(st.nextToken());
+                    zfile.print(" " + val);
+                    if(val < 0 && j>1)
+                        val = z[j-1][i];
+                    z[j][i] = val;
+                    if(step>1)
+                    for(int s = 1; s < step; s++)
+                        if(st.hasMoreTokens())
+                        st.nextToken();
+                    }
+                }
+                zfile.println();
+                if(step>1)
+                    for(int s = 1; s < step; s++)
+                        dtm.readLine();
+            }
+            // Close files
+            dtm.close();
+            zfile.close();
+        }catch(FileNotFoundException nf){
+            System.out.println("No input DEM file found: " + nf.toString());
+        }catch(IOException ioe){
+            System.out.println("Input/output error: " + ioe.toString());
+        }
+        return z;
+    }
+    
+
+    /**
+     * Generate a PDDL file with tasks.
+     * @param dem map data.
+     * @param numtasks number of tasks.
+     * @param pddlfile output file.
+     */
+    public static void generatePDDLtasks(Map dem, int numtasks, String pddlfile)
+    {
+	ArrayList<int[]> points = new ArrayList();
+	Random rand = new Random();
+	int ntasks = numtasks;
+	boolean insert;
+	int x, y;
+	while(ntasks>0)
+	{
+	    x = rand.nextInt(dem.get_nrows());
+	    y = rand.nextInt(dem.get_ncols());
+	    if(dem.get_succesors_without_obstacles(new Node(x,y,0)).size() > 0)
+	    {
+		insert = true;
+		for(int i = 0; i < points.size(); i++)
+		    if(points.get(i)[0] == x && points.get(i)[1] == y)
+			insert = false;
+		if(insert)
+		{
+		    points.add(new int[]{x,y});
+		    ntasks--;
+		}
+	    }
+	}
+        try{
+	    String abspath = new File("").getAbsolutePath();
+            FileWriter fw = new FileWriter(abspath + File.separator + pddlfile + "-" + numtasks + ".pddl");
+            PrintWriter file = new PrintWriter(fw);
+	    file.println("(define");
+	    file.println("(problem pro_nombre_default)");
+	    file.println("(:domain dom_nombre_default)");
+	    file.println("(:objects");
+	    file.println(" C0_0 - celda");
+	    for(int i = 0; i < points.size(); i++)
+		file.print(" C"+points.get(i)[0]+"_"+points.get(i)[1]);
+	    file.println(" - celda\n)");
+	    file.println("(:init");
+	    file.println("(robot_at C0_0)\n)");
+	    file.println("(:goal (and");
+	    for(int i = 0; i < points.size(); i++)
+		file.println(" (foto C"+points.get(i)[0]+"_"+points.get(i)[1]+")");
+	    file.println(" )\n)\n)");
+	    file.close();
+	}catch(IOException ioe){System.out.println("Input/output error: " + ioe.toString());}
+    }
+ 
+    
+    public static void histogram_filter(Map map)
+    {
+        float med=(map.min_alt()+map.max_alt())/2;
+        float des=(map.max_alt()-map.min_alt())/(float)3.5;
+        System.out.println("MIN: "+map.min_alt()+" MAX: "+map.max_alt()+" MED: "+med+" DES: "+des);
+        float az;
+        int o=0;
+        for(int i=1; i<map.get_ncols()-2; i++)
+            for(int j=1; j<map.get_nrows()-2; j++)
+            {
+                az= map.get_node(i+1,j).getZ()+map.get_node(i,j+1).getZ()+map.get_node(i-1,j).getZ()+map.get_node(i,j-1).getZ();
+                az /= 4;
+                if(az > med+des || az < med-des)
+                {
+                    map.cost[i][j]=Map.MAX_COST+1;
+                    o++;
+                }
+            }
+        System.out.println("#obs: "+o+" ("+((float)100*o/(map.get_ncols()*map.get_nrows()))+"%)");
+    }
+    
+}
