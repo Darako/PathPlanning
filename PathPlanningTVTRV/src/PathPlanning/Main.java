@@ -150,6 +150,9 @@ public class Main {
             case 'd': // Dijkstra algorithm
                 algorithm = new Dijkstra(map, map.get_node(xs, ys), map.get_node(xg, yg), heur, withz, withc);
                 break;
+            case 'a': // Dijkstra algorithm
+                algorithm = new AStar(map, map.get_node(xs, ys), map.get_node(xg, yg), heur, withz, withc);
+                break;  
     	    default:
                 algorithm = new Dijkstra();
                 System.out.println("Invalid search algorithm: " + alg);

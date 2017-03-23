@@ -1,0 +1,73 @@
+package PathPlanning;
+
+import java.util.ArrayList;
+import java.util.List;
+
+public class AStar extends SearchMethod {
+
+    private List<Node> open;
+	
+	public AStar(Map dem, Node init, Node end, short heuristic, boolean withZ, boolean withC) {
+		super("AStar", dem, init, end, heuristic, withZ, withC, false);		
+		open = new ArrayList<>();
+		open = map.get_succesors_without_obstacles(init);
+	}
+	
+
+	@Override
+	protected void clear_internal_data() {
+		open.clear(); // References in open list lost in DEM clean (new nodes)
+		for(int j = 0; j < map.get_nrows(); j++) {
+	        for(int i = 0; i < map.get_ncols(); i++) {
+	            map.get_node(i, j).setG(Float.MAX_VALUE);
+	            map.get_node(i, j).setParent(null);
+	            open.add(map.get_node(i, j));
+	        }
+	    }		
+	}
+
+	@Override
+	public boolean search() {	
+		 if(!check_valid_data())
+	            return false;
+	        // Set initial state
+	        Node pos = start;
+	        // Auxiliary variables
+	        int x=0, y=0;
+	        ArrayList<Node> succ = new ArrayList();
+	        
+	        // Dijkstra expansion
+	        start_cpu_counter();
+	        while(!open.isEmpty()) {	        	
+	        	pos =
+	        }
+        
+        
+		return (Boolean) null;
+	}
+	
+	/*@Override
+	public boolean search() {	
+		Node p;	
+		ArrayList<Node> closed = new ArrayList<Node>();
+		ArrayList<Node> succ = new ArrayList<Node>();		
+		while(!open.isEmpty()){
+			p = open.remove(open.size());
+			if(p == goal){
+				return true;
+			}
+			closed.add(p);
+            succ = map.get_succesors(p);
+			for (Node t: succ){
+				if(!closed.contains(t)){
+					if(!open.contains(t)){
+						t.setG((Float) null); //pretendia que fuera infinito, pero meh
+						t.setParent(null);
+					}
+					//update vertex?
+				}
+			}
+		}		
+		return false;
+	}*/
+}
