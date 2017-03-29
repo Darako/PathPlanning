@@ -7,6 +7,6 @@
 <listEntry value="1"/>
 </listAttribute>
 <stringAttribute key="org.eclipse.jdt.launching.MAIN_TYPE" value="PathPlanning.Main"/>
-<stringAttribute key="org.eclipse.jdt.launching.PROGRAM_ARGUMENTS" value="z c 1 1 3 3 -a sol -w30"/>
+<stringAttribute key="org.eclipse.jdt.launching.PROGRAM_ARGUMENTS" value="Zeta Ce 2 2 6 7 -a Solucion -w30"/>
 <stringAttribute key="org.eclipse.jdt.launching.PROJECT_ATTR" value="PathPlanningTVTRV"/>
 </launchConfiguration>

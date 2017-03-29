@@ -7,19 +7,25 @@ import java.util.List;
 public class AStar extends SearchMethod {
 
     private List<Node> open;
+    private List<Node> closed;
 	
 	public AStar(Map dem, Node init, Node end, short heuristic, boolean withZ, boolean withC) {
 		super("AStar", dem, init, end, heuristic, withZ, withC, false);		
-		open = new ArrayList<>();		
+		open = new ArrayList<>();	
+		closed = new ArrayList<>();
 		for(int j = 0; j < map.get_nrows(); j++) {
 	        for(int i = 0; i < map.get_ncols(); i++) {
 	            map.get_node(i, j).setParent(null);
+//	            if(dem.get_tcost(i, j) > 1.00) 
+//	            	map.get_node(i, j).OBS = 1.00f;
+	            map.get_node(i, j).setZ(dem.get_tcost(i, j));
 	        }
 	    }		
 		init.setG(0);
 		init.setH(get_h(init, init, end));
 		init.setF(init.getG()+init.getH());
-		open = map.get_succesors_without_obstacles(init);		
+		init.setParent(init);
+		open.add(init);
 	}
 	
 
@@ -36,46 +42,61 @@ public class AStar extends SearchMethod {
 	@Override
 	public boolean search() {	
 		if(!check_valid_data())
-			return false;
-		    
+			return false;		    
 		Node nodoActual = start;
-		int x=0, y=0;
-		float g;
-		float h;
-		ArrayList<Node> succ = new ArrayList();	  
-		ArrayList<Node> path = new ArrayList();	  
-		open.add(nodoActual);	
-		Collections.sort(open);
-		nodoActual = open.remove(0);
-		start_cpu_counter();
-		while(!nodoActual.equals(goal)) {
-			x = nodoActual.getX();
-			y = nodoActual.getY();
-			succ = map.get_succesors_without_obstacles(nodoActual);
-			for(int i = 0; i < succ.size(); i++){
-				if(succ.get(i).getParent() == null)
-					succ.get(i).setParent(nodoActual);
-				g = get_g(nodoActual, succ.get(i), false);
-				h = get_h(nodoActual, succ.get(i), goal);
-				
-				succ.get(i).setF(g,h);
-				if(!open.contains(succ.get(i))){
-					open.add(succ.get(i));
-				}
-			}
+		ArrayList<Node> sucesores = new ArrayList<Node>();	  
+		ArrayList<Node> path = new ArrayList<Node>();		
+		//start_cpu_counter();
+		while(!open.isEmpty()){
 			Collections.sort(open);
-			nodoActual = open.remove(0);	        	
-		}
-        end_cpu_counter();
-		path = get_path(nodoActual); 
-		print_open(path);
+			nodoActual = open.remove(0);
+			if(nodoActual.equals(goal)){
+				path = get_path(nodoActual); 
+				print_path(path);
+				return true;
+			}
+			closed.add(nodoActual);
+			sucesores = map.get_succesors(nodoActual);
+			for(int i = 0; i < sucesores.size(); i++){
+				Node sucesor = sucesores.get(i);
+				if(!sucesor.isObstacle()){
+					if(!closed.contains(sucesor)){
+						if(!open.contains(sucesor)){
+							sucesor.setG(Float.MAX_VALUE);
+							sucesor.setParent(null);
+						}
+						UpdateVertex(nodoActual, sucesor);
+					}
+				}				
+			}			
+		}	
 		return true;
 	}
 	
-	public ArrayList get_path(Node dest) {
+	
+	public void UpdateVertex(Node nodoActual, Node nodoSucesor){
+		float gActual, gSucesor;
+		float hActualSucesor;
+		gActual = nodoActual.getG();
+		gSucesor = nodoSucesor.getG();
+		hActualSucesor = get_h(nodoActual, nodoSucesor, goal);
+		if(gActual+hActualSucesor < gSucesor){
+			gSucesor = gActual+hActualSucesor;
+			nodoSucesor.setG(gSucesor);
+			nodoSucesor.setParent(nodoActual);
+			if(open.contains(nodoSucesor)){
+				open.remove(nodoSucesor);
+			}
+			open.add(nodoSucesor);
+		}
+		
+	}
+	
+	
+	public ArrayList<Node> get_path(Node dest) {
 		ArrayList<Node> camino = new ArrayList<Node>();
 		Node nodoActual = dest;
-		while(nodoActual.getParent() != null){
+		while(!nodoActual.getParent().equals(nodoActual)){
 			camino.add(nodoActual);
 			nodoActual = nodoActual.getParent();
 		}
@@ -86,15 +107,10 @@ public class AStar extends SearchMethod {
     /**
      * Print the open list.
      */
-    private void print_open(ArrayList<Node> path)
+    private void print_path(ArrayList<Node> path)
     {   
         System.out.println("Camino :");
         for(int i=0; i < path.size(); i++)
             System.out.println("    " + path.get(i).toString());
-        java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(System.in));
-        try{ 
-            br.readLine();
-        }catch(Exception ioe){}
-        System.out.println();
     }	
 }
