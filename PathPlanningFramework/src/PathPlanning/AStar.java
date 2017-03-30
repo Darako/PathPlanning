@@ -59,6 +59,7 @@ public class AStar extends SearchMethod {
 			for(int i = 0; i < sucesores.size(); i++){
 				Node sucesor = sucesores.get(i);
 //				if(!sucesor.isObstacle()){
+				if((map.cost[sucesor.getX()][sucesor.getY()]) < (map.MAX_COST)){
 					if(!closed.contains(sucesor)){
 						if(!open.contains(sucesor)){
 							sucesor.setG(Float.MAX_VALUE);
@@ -66,7 +67,7 @@ public class AStar extends SearchMethod {
 						}
 						UpdateVertex(nodoActual, sucesor);
 					}
-//				}				
+				}				
 			}			
 		}	
 		return true;

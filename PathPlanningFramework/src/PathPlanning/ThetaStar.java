@@ -166,14 +166,19 @@ public class ThetaStar extends SearchMethod {
 	}
 	
 	public boolean grid(float x, float y){
-		Node nAux;
+		/**Node nAux;
 		System.out.print("X: "+x+" - Y: "+y);
 		nAux = map.get_node((int)x, (int)y);
 		if(nAux.isObstacle())
 			System.out.println(" - Es Obstaculo.");
 		else
 			System.out.println(" - No es Obstaculo.");
-		return nAux.isObstacle();
+		return nAux.isObstacle();**/
+		if(map.cost[(int)x][(int)y] > Map.MAX_COST){ // Objective is obstacle
+			 return true;
+		} else {
+			return false;
+		}
 	}
 
 	public ArrayList<Node> get_path(Node dest) {
