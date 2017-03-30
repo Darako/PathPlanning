@@ -170,6 +170,12 @@ public class ThetaStar extends SearchMethod {
 		return true;
 	}
 	
+	public boolean grid(float x, float y){
+		Node nAux;
+		nAux = map.get_node(x,y);
+		return nAux.isObstacle();
+	}
+
 	public ArrayList<Node> get_path(Node dest) {
 		ArrayList<Node> camino = new ArrayList<Node>();
 		Node nodoActual = dest;
