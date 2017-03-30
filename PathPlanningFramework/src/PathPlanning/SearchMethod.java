@@ -247,7 +247,7 @@ public abstract class SearchMethod {
         path.add(aux);
         while(aux.getParent() != null && !aux.equals(start))
         {
-            System.out.println(aux.toString());
+            //System.out.println(aux.toString());
             aux = aux.getParent();
             path.add(aux);
         }
