@@ -9,7 +9,7 @@ public class ThetaStar extends SearchMethod {
     private List<Node> open;
     private List<Node> closed;
 	
-	public ThetaStar(Map dem, Node init, Node end, short heuristic, boolean withZ, boolean withC) {
+	public AStar(Map dem, Node init, Node end, short heuristic, boolean withZ, boolean withC) {
 		super("AStar", dem, init, end, heuristic, withZ, withC, false);		
 		open = new ArrayList<>();	
 		closed = new ArrayList<>();
@@ -18,7 +18,7 @@ public class ThetaStar extends SearchMethod {
 	            map.get_node(i, j).setParent(null);
 //	            if(dem.get_tcost(i, j) > 1.00) 
 //	            	map.get_node(i, j).OBS = 1.00f;
-//	            map.get_node(i, j).setZ(dem.get_tcost(i, j));
+	            map.get_node(i, j).setZ(dem.get_tcost(i, j));
 	        }
 	    }		
 		init.setG(0);
@@ -75,21 +75,36 @@ public class ThetaStar extends SearchMethod {
 	
 	
 	public void UpdateVertex(Node nodoActual, Node nodoSucesor){
-		float gActual, gSucesor;
-		float hActualSucesor;
+		float gActual, gSucesor, gPapa;
+		float hActualSucesor,hPapaSucesor;
+		Node papa;
+		papa = nodoActual.getParent();
+		gPapa = papa.getG();
 		gActual = nodoActual.getG();
 		gSucesor = nodoSucesor.getG();
 		hActualSucesor = get_h(nodoActual, nodoSucesor, goal);
-		if(gActual+hActualSucesor < gSucesor){
-			gSucesor = gActual+hActualSucesor;
-			nodoSucesor.setG(gSucesor);
-			nodoSucesor.setParent(nodoActual);
-			if(open.contains(nodoSucesor)){
-				open.remove(nodoSucesor);
+		hPapaSucesor = get_h(papa, nodoSucesor, goal);
+		if LineOfSight(papa, nodoSucesor){
+			if (gPapa+hPapaSucesor < gSucesor){
+				gSucesor = gPapa+hPapaSucesor;
+				nodoSucesor = setG(gSucesor);
+				nodoSucesor.setParent(papa);
+				if(open.contains(nodoSucesor)){
+					open.remove(nodoSucesor);
+				}
+				open.add(nodoSucesor);
 			}
-			open.add(nodoSucesor);
+		} else {
+			if(gActual+hActualSucesor < gSucesor){
+				gSucesor = gActual+hActualSucesor;
+				nodoSucesor.setG(gSucesor);
+				nodoSucesor.setParent(nodoActual);
+				if(open.contains(nodoSucesor)){
+					open.remove(nodoSucesor);
+				}
+				open.add(nodoSucesor);
+			}
 		}
-		
 	}
 	
 	public boolean LineOfSight(Node nodoActual, Node nodoSucesor){
