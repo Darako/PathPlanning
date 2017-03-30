@@ -8,7 +8,7 @@ package PathPlanning;
 public class Node implements Comparable {
  
     /** Define the min Z value. Values less than OBS represents and obstacle. */
-    public static final short OBS = 1;
+    public static final short OBS = 0;
     /** X position. */
     private int X;
     /** Y position. */

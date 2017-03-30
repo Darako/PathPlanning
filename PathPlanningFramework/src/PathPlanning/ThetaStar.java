@@ -9,16 +9,13 @@ public class ThetaStar extends SearchMethod {
     private List<Node> open;
     private List<Node> closed;
 	
-	public AStar(Map dem, Node init, Node end, short heuristic, boolean withZ, boolean withC) {
-		super("AStar", dem, init, end, heuristic, withZ, withC, false);		
+	public ThetaStar(Map dem, Node init, Node end, short heuristic, boolean withZ, boolean withC) {
+		super("ThetaStar", dem, init, end, heuristic, withZ, withC, false);		
 		open = new ArrayList<>();	
 		closed = new ArrayList<>();
 		for(int j = 0; j < map.get_nrows(); j++) {
 	        for(int i = 0; i < map.get_ncols(); i++) {
-	            map.get_node(i, j).setParent(null);
-//	            if(dem.get_tcost(i, j) > 1.00) 
-//	            	map.get_node(i, j).OBS = 1.00f;
-	            map.get_node(i, j).setZ(dem.get_tcost(i, j));
+	            map.get_node(i, j).setParent(null);	            
 	        }
 	    }		
 		init.setG(0);
@@ -59,14 +56,12 @@ public class ThetaStar extends SearchMethod {
 			sucesores = map.get_succesors(nodoActual);
 			for(int i = 0; i < sucesores.size(); i++){
 				Node sucesor = sucesores.get(i);
-				if(!sucesor.isObstacle()){
-					if(!closed.contains(sucesor)){
-						if(!open.contains(sucesor)){
-							sucesor.setG(Float.MAX_VALUE);
-							sucesor.setParent(null);
-						}
-						UpdateVertex(nodoActual, sucesor);
+				if(!closed.contains(sucesor)){
+					if(!open.contains(sucesor)){
+						sucesor.setG(Float.MAX_VALUE);
+						sucesor.setParent(null);
 					}
+					UpdateVertex(nodoActual, sucesor);
 				}				
 			}			
 		}	
@@ -84,10 +79,10 @@ public class ThetaStar extends SearchMethod {
 		gSucesor = nodoSucesor.getG();
 		hActualSucesor = get_h(nodoActual, nodoSucesor, goal);
 		hPapaSucesor = get_h(papa, nodoSucesor, goal);
-		if LineOfSight(papa, nodoSucesor){
+		if (LineOfSight(papa, nodoSucesor)){
 			if (gPapa+hPapaSucesor < gSucesor){
 				gSucesor = gPapa+hPapaSucesor;
-				nodoSucesor = setG(gSucesor);
+				nodoSucesor.setG(gSucesor);
 				nodoSucesor.setParent(papa);
 				if(open.contains(nodoSucesor)){
 					open.remove(nodoSucesor);
@@ -134,16 +129,16 @@ public class ThetaStar extends SearchMethod {
 			while (x0 != x1){
 				f = f + dy;
 				if (f >= dx){
-					if grid(x0 + ((sx - 1)/2), y0 +((sy - 1)/2)){
+					if (grid(x0 + ((sx - 1)/2), y0 +((sy - 1)/2))){
 						return false;
 					}
 					y0 = y0 + sy;
 					f = f - dx;
 				}
-				if ((f != 0) and (grid(x0 + ((sx - 1)/2), y0 + ((sy - 1)/2)){
+				if ((f != 0) && (grid(x0 + ((sx - 1)/2), y0 + ((sy - 1)/2)))){
 					return false;
 				}
-				if ((dy != 0) and (grid(x0 + ((sx - 1)/2), y0)) and (grid(x0 + ((sx - 1)/2), y0 - 1))){
+				if ((dy != 0) && (grid(x0 + ((sx - 1)/2), y0)) && (grid(x0 + ((sx - 1)/2), y0 - 1))){
 					return false;
 				}
 				x0 = x0 + sx;
@@ -152,16 +147,16 @@ public class ThetaStar extends SearchMethod {
 			while (y0 != y1){
 				f = f + dx;
 				if (f >= dy){
-					if grid(x0 + ((sx - 1)/2), y0 +((sy - 1)/2)){
+					if (grid(x0 + ((sx - 1)/2), y0 +((sy - 1)/2))){
 						return false;
 					}
 					x0 = x0 + sx;
 					f = f - dy;
 				}
-				if ((f != 0) and (grid(x0 + ((sx - 1)/2), y0 + ((sy - 1)/2)){
+				if ((f != 0) && (grid(x0 + ((sx - 1)/2), y0 + ((sy - 1)/2)))){
 					return false;
 				}
-				if ((dy != 0) and (grid(x0, y0 + ((sy - 1)/2))) and (grid(x0 - 1, y0 + ((sy - 1)/2)))){
+				if ((dy != 0) && (grid(x0, y0 + ((sy - 1)/2))) && (grid(x0 - 1, y0 + ((sy - 1)/2)))){
 					return false;
 				}
 				y0 = y0 + sy;
@@ -172,7 +167,12 @@ public class ThetaStar extends SearchMethod {
 	
 	public boolean grid(float x, float y){
 		Node nAux;
-		nAux = map.get_node(x,y);
+		System.out.print("X: "+x+" - Y: "+y);
+		nAux = map.get_node((int)x, (int)y);
+		if(nAux.isObstacle())
+			System.out.println(" - Es Obstaculo.");
+		else
+			System.out.println(" - No es Obstaculo.");
 		return nAux.isObstacle();
 	}
 

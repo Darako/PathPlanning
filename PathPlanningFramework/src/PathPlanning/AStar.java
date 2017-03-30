@@ -18,7 +18,7 @@ public class AStar extends SearchMethod {
 	            map.get_node(i, j).setParent(null);
 //	            if(dem.get_tcost(i, j) > 1.00) 
 //	            	map.get_node(i, j).OBS = 1.00f;
-	            map.get_node(i, j).setZ(dem.get_tcost(i, j));
+//	            map.get_node(i, j).setZ(dem.get_tcost(i, j));
 	        }
 	    }		
 		init.setG(0);
@@ -46,7 +46,6 @@ public class AStar extends SearchMethod {
 		Node nodoActual = start;
 		ArrayList<Node> sucesores = new ArrayList<Node>();	  
 		ArrayList<Node> path = new ArrayList<Node>();		
-		//start_cpu_counter();
 		while(!open.isEmpty()){
 			Collections.sort(open);
 			nodoActual = open.remove(0);
@@ -59,7 +58,7 @@ public class AStar extends SearchMethod {
 			sucesores = map.get_succesors(nodoActual);
 			for(int i = 0; i < sucesores.size(); i++){
 				Node sucesor = sucesores.get(i);
-				if(!sucesor.isObstacle()){
+//				if(!sucesor.isObstacle()){
 					if(!closed.contains(sucesor)){
 						if(!open.contains(sucesor)){
 							sucesor.setG(Float.MAX_VALUE);
@@ -67,7 +66,7 @@ public class AStar extends SearchMethod {
 						}
 						UpdateVertex(nodoActual, sucesor);
 					}
-				}				
+//				}				
 			}			
 		}	
 		return true;

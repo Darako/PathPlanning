@@ -155,7 +155,7 @@ public class Main {
                 break;  
             case 't': // Theta* algorithm
                 algorithm = new ThetaStar(map, map.get_node(xs, ys), map.get_node(xg, yg), heur, withz, withc);
-                break;  
+                break; 
     	    default:
                 algorithm = new Dijkstra();
                 System.out.println("Invalid search algorithm: " + alg);
