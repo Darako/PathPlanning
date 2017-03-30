@@ -1,0 +1,12 @@
+#p-cost  : 1.0
+#h-change: 1
+#v-expans: 0
+#cpu-time: 0.0
+#beta-avg: 1.0
+#degrees : 1.0
+#nº-steps: 3
+
+#ThetaStar
+1 1 -0.0
+44 39 -0.0
+44 40 -0.0
